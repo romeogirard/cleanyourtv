@@ -1,0 +1,65 @@
+# TCL 43S446 CA (4-Series, Google TV sur Android 11, xhdpi, 32 bits, 2 Go de RAM), Canada.
+# Point de départ : examples/tcl-55s546-us (même plateforme Google TV Android 11 de TCL). Les 24 paquets de
+# cette liste sont tous présents ici ; ajouts propres à ce modèle marqués « ajout 43S446 ».
+# Audit du 2026-11-06 : 127 paquets, aucun désactivé d'usine. Accueil actuel : launcherx.
+#
+# Appliquer :  TV_HOST=192.168.0.56 tools/disable.sh examples/tcl-43s446-ca/debloat.txt
+# Annuler :    TV_HOST=192.168.0.56 tools/restore.sh examples/tcl-43s446-ca/debloat.txt com.google.android.apps.tv.launcherx
+# Tout est DÉSACTIVÉ, rien n'est désinstallé. Mets un # devant une ligne pour la garder.
+#
+# ATTENTION Wi-Fi : le réseau enregistré appartient à com.google.android.tungsten.setupwraith (cname vu à l'audit).
+# Avant le lot 5 : Paramètres → Réseau → ton Wi-Fi → Oublier, puis te reconnecter. disable.sh saute setupwraith
+# tant qu'il possède le réseau.
+#
+# NE PAS DÉSACTIVER : com.tcl.tv, com.tcl.tvinput (TV en direct, HDMI), com.tcl.suspension (panneau Sources),
+# com.tcl.settings, com.tcl.system.server, com.tcl.providers.config, com.tcl.initsetup, com.tcl.factory.view,
+# com.tcl.tcl_bt_rcu_service, com.tcl.autopair (télécommande), com.tcl.keyhelp, com.tvos,
+# com.google.android.tv.remote.service, com.google.android.inputmethod.latin (clavier), com.google.android.katniss
+# (micro de la télécommande), com.google.android.apps.mediashell (Chromecast), com.tcl.versionUpdateApp (mises à jour).
+
+# ---- 1. Télémétrie TCL et Google ----
+com.tcl.bi                                  # statistiques TCL
+com.tcl.xian.StartandroidService            # service de rapports en arrière-plan
+com.google.android.feedback                 # rapports de plantage / feedback
+
+# ---- 2. Pubs, promos et rangées de contenu ----
+com.tcl.dashboard                           # tableau de bord promo TCL
+com.tcl.partnercustomizer                   # rangées partenaires
+com.tcl.messagebox                          # boîte à messages promo
+com.tcl.esticker                            # surcouche d'autocollants
+com.tcl.waterfall.overseas                  # ancien portail vidéo TCL
+android.autoinstalls.config.google.gtvpai   # installe des apps partenaires sans demander
+com.google.android.partnersetup             # attribution partenaire (pings RLZ)
+com.google.android.onetimeinitializer       # restes de la configuration initiale
+com.tcl.useragreement                       # ajout 43S446 : écrans d'accord utilisateur TCL
+
+# ---- 3. Services de fond et extras préinstallés ----
+com.tcl.guard                               # support en ligne TCL
+com.tcl.usercenter                          # rappels de connexion au compte TCL
+com.tcl.ocean.instructions                  # manuel électronique
+com.tcl.android.webview                     # WebView TCL (celle de Google reste)
+org.chromium.webview_shell                  # coquille de test WebView
+com.google.android.syncadapters.calendar    # synchro d'agenda
+com.google.android.play.games               # Play Jeux
+com.tcl.gallery                             # galerie TCL
+com.android.camera2                         # ajout 43S446 : appareil photo, pas de caméra sur la TV
+com.android.printspooler                    # ajout 43S446 : impression
+
+# ---- 4. Assistants vocaux non utilisés ----
+com.tcl.smartalexa                          # pont Alexa
+com.tcl.assistant                           # assistant vocal TCL (la recherche vocale Google reste)
+
+# ---- 5. Assistant de configuration Google TV : réclame l'accueil une fois launcherx coupé ----
+com.google.android.tungsten.setupwraith
+
+# ---- 6. Écran de veille Ambiant de Google (promos) ----
+# Passer d'abord à l'horloge du launcher : settings put secure screensaver_components com.gathin.tvhome/.ClockDream
+com.google.android.apps.tv.dreamx
+
+# ---- 7. Choix de Romeo (2026-11-06) : apps non utilisées ; AirCast gardé ----
+com.tcl.channelplus                         # chaînes gratuites TCL Live (avec pubs)
+com.tcl.tv.tclchannel                       # TCL Channel, intègre Google Mobile Ads
+com.tcl.tv.plus                             # TCL TV+
+# com.smartdevice.tv.aircast             # GARDÉ pour AirPlay ; démarrage en arrière-plan bloqué à part (appops)
+com.google.android.youtube.tvmusic          # YouTube Music
+com.google.android.videos                   # app Google TV (films et séries)

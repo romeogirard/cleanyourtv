@@ -1,0 +1,6 @@
+{
+  "live_tv_package": "com.tcl.tv",
+  "clock_format": "24",
+  "tile_menu": true,
+  "app_library": true
+}
