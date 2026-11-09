@@ -15,6 +15,11 @@ import android.os.Looper;
 import android.util.DisplayMetrics;
 import android.view.View;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.TextClock;
+import android.util.TypedValue;
+
+import org.json.JSONObject;
 
 import java.io.File;
 import java.time.LocalDateTime;
@@ -63,11 +68,13 @@ final class ClockScene {
     private String order;
     private Map<String, Set<String>> moods;
     private String latitude, longitude;
+    /** Fork de Romeo (clock_layout) : l'horloge reste à cette place (px), sans dériver. -1 : comportement d'origine. */
+    private float fixedX = -1f, fixedY = -1f;
 
     private final Runnable tick = new Runnable() {
         @Override
         public void run() {
-            moveClock();
+            if (fixedX < 0f) moveClock();
             shiftGlow();
             advanceWallpaper();
             handler.postDelayed(this, MOVE_MS);
@@ -115,6 +122,11 @@ final class ClockScene {
      * Call before start(), which starts the decode (again after a stop() that dropped an unfinished one).
      */
     void useHomeWallpaper(Context ctx) {
+        JSONObject raw = Config.rawTheme(ctx);
+        JSONObject layout = raw == null ? null : raw.optJSONObject("clock_layout");
+        if (layout != null) applyLayout(ctx, layout);
+        String pinned = raw == null ? "" : raw.optString("clock_wallpaper_image", "");
+        boolean opposite = raw != null && raw.optBoolean("clock_wallpaper_opposite", false);
         Config cfg;
         try {
             cfg = Config.load(ctx);
@@ -141,9 +153,25 @@ final class ClockScene {
                     .getString("image", "");
             File current = WallpaperRotation.find(rotation, shown);
             wallpaperFile = current != null ? current : rotation.get(0);
+            // clock_wallpaper_opposite (fork de Romeo) : l'écran de veille montre la photo que l'accueil
+            // n'affiche pas (la suivante de la collection) et la garde tant qu'il reste affiché.
+            if (opposite && rotation.size() > 1) {
+                int i = rotation.indexOf(wallpaperFile);
+                wallpaperFile = rotation.get((Math.max(0, i) + 1) % rotation.size());
+                rotation = null;
+            } else if (!pinned.isEmpty()) {
+                // clock_wallpaper_image (fork de Romeo) : l'écran de veille garde toujours cette photo.
+                for (File f : rotation) {
+                    if (f.getName().equals(pinned)) {
+                        wallpaperFile = f;
+                        rotation = null;
+                        break;
+                    }
+                }
+            }
             // Home only rotates while it is visible, so the screensaver carries the rotation on
             // itself; without this it holds one picture for as long as it is up.
-            rotationMs = cfg.wallpaperRotationMinutes * 60_000L;
+            rotationMs = rotation == null ? 0L : cfg.wallpaperRotationMinutes * 60_000L;
             order = cfg.wallpaperOrder;
             moods = cfg.wallpaperMoods;
             latitude = moods.isEmpty() ? "" : ctx.getString(R.string.latitude);
@@ -227,6 +255,92 @@ final class ClockScene {
                 WallpaperMood.timeOfDay(now.getHour() * 60 + now.getMinute(), sun[0], sun[1]));
     }
 
+    /**
+     * Fork de Romeo, clé de thème clock_layout : l'horloge de l'écran de veille posée là où le design la met,
+     * avec ses tailles et sa disposition. Clés (toutes facultatives) : x, y (dp depuis le coin haut gauche),
+     * clock_size (sp), clock_font (extralight, light, regular, medium), clock_alpha (0-100), clock_spacing,
+     * date_size (sp), date_font, date_alpha, date_caps, date_spacing, date_gap (dp), date_above, date_beside, date_format,
+     * align (left, center, right). Une télé LCD ne marque pas : l'horloge peut rester fixe.
+     */
+    private void applyLayout(Context ctx, JSONObject l) {
+        float d = ctx.getResources().getDisplayMetrics().density;
+        TextClock time = content.findViewById(R.id.dreamTime);
+        TextClock date = content.findViewById(R.id.dreamDate);
+        if (time != null) {
+            if (l.has("clock_size")) time.setTextSize(TypedValue.COMPLEX_UNIT_SP, (float) l.optDouble("clock_size", 120));
+            if (l.has("clock_font")) time.setTypeface(font(ctx, l.optString("clock_font")));
+            if (l.has("clock_alpha")) time.setTextColor(white(l.optInt("clock_alpha", 90)));
+            if (l.has("clock_spacing")) time.setLetterSpacing((float) l.optDouble("clock_spacing", -0.04));
+        }
+        if (date != null) {
+            if (l.has("date_size")) date.setTextSize(TypedValue.COMPLEX_UNIT_SP, (float) l.optDouble("date_size", 18));
+            if (l.has("date_font")) date.setTypeface(font(ctx, l.optString("date_font")));
+            if (l.has("date_alpha")) date.setTextColor(white(l.optInt("date_alpha", 55)));
+            if (l.has("date_caps")) date.setAllCaps(l.optBoolean("date_caps", true));
+            if (l.has("date_spacing")) date.setLetterSpacing((float) l.optDouble("date_spacing", 0.14));
+            if (l.has("date_format")) {
+                date.setFormat12Hour(l.optString("date_format"));
+                date.setFormat24Hour(l.optString("date_format"));
+            }
+            if (l.optBoolean("date_sentence_case", false)) SentenceCase.attach(date);
+            LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) date.getLayoutParams();
+            if (l.has("date_gap")) {
+                int gap = Math.round((float) l.optDouble("date_gap", 4) * d);
+                if (l.optBoolean("date_above", false)) { lp.topMargin = 0; lp.bottomMargin = gap; }
+                else lp.topMargin = gap;
+            }
+            String align = l.optString("align", "left");
+            int g = "right".equals(align) ? android.view.Gravity.END
+                    : "center".equals(align) ? android.view.Gravity.CENTER_HORIZONTAL : android.view.Gravity.START;
+            lp.gravity = g;
+            if (!"left".equals(align)) lp.setMarginStart(0);
+            date.setLayoutParams(lp);
+            View timeRow = (View) time.getParent();
+            LinearLayout.LayoutParams rp = (LinearLayout.LayoutParams) timeRow.getLayoutParams();
+            rp.gravity = g;
+            timeRow.setLayoutParams(rp);
+            if (l.optBoolean("date_beside", false)) {
+                // La date à droite de l'heure, centrée verticalement sur elle (design de Romeo).
+                LinearLayout row = (LinearLayout) timeRow;
+                ((LinearLayout) content).removeView(date);
+                row.setBaselineAligned(false);
+                row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+                LinearLayout.LayoutParams bp = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                bp.gravity = android.view.Gravity.CENTER_VERTICAL;
+                bp.setMarginStart(Math.round((float) l.optDouble("date_gap", 14) * d));
+                row.addView(date, bp);
+            } else if (l.optBoolean("date_above", false)) {
+                LinearLayout box = (LinearLayout) content;
+                box.removeView(date);
+                box.addView(date, 0);
+            }
+        }
+        if (l.has("x") && l.has("y")) {
+            fixedX = Math.max(0f, (float) l.optDouble("x", 0) * d);
+            fixedY = Math.max(0f, (float) l.optDouble("y", 0) * d);
+        }
+    }
+
+    private static int white(int percent) {
+        return (Math.round(Math.max(0, Math.min(100, percent)) * 2.55f) << 24) | 0xFFFFFF;
+    }
+
+    private static android.graphics.Typeface font(Context ctx, String weight) {
+        int id;
+        switch (weight) {
+            case "extralight": id = R.font.geist_extralight; break;
+            case "light": id = R.font.geist_light; break;
+            case "medium": id = R.font.geist_medium; break;
+            default: id = R.font.geist_regular;
+        }
+        try {
+            return ctx.getResources().getFont(id);
+        } catch (RuntimeException e) {
+            return android.graphics.Typeface.DEFAULT;
+        }
+    }
+
     private void moveClock() {
         content.animate().alpha(0f).setDuration(900).withLayer().withEndAction(() -> {
             placeClock();
@@ -237,6 +351,11 @@ final class ClockScene {
     /** A random spot that keeps the whole clock on screen, with the glow centred behind it. */
     private void placeClock() {
         View parent = (View) content.getParent();
+        if (fixedX >= 0f) {
+            content.setX(fixedX);
+            content.setY(fixedY);
+            return;
+        }
         int maxX = Math.max(0, parent.getWidth() - content.getWidth());
         int maxY = Math.max(0, parent.getHeight() - content.getHeight());
         float x = maxX * (0.1f + 0.8f * random.nextFloat());
