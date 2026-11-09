@@ -184,6 +184,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private TextView greeting;
     private View clockBlock;
     private View btnInputs;
+    private View btnHome;
     /** config show_inputs_pill: false keeps the Inputs pill hidden even when the TV has inputs. */
     private boolean showInputsPill = true;
     private TextView btnWifi;
@@ -683,8 +684,29 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             public void onChildViewDetachedFromWindow(@NonNull View v) {
             }
         });
-        if (dockRow) grid.addItemDecoration(new DockDecoration(COLUMNS, density, cinematic, cfg.alwaysShowNames, cfg.dockOpacity, cfg.dockGlass, cfg.dockEvenPadding, cfg.dockBand,
-                singleRow, cfg.dockBandAll));
+        if (dockRow) {
+            DockDecoration dockBand = new DockDecoration(COLUMNS, density, cinematic, cfg.alwaysShowNames, cfg.dockOpacity, cfg.dockGlass, cfg.dockEvenPadding, cfg.dockBand,
+                    singleRow, cfg.dockBandAll);
+            grid.addItemDecoration(dockBand);
+            // Fork de Romeo : le panneau de match (ou F1) posé juste au-dessus de la bande du dock, à l'écart du
+            // design (race_panel_gap, 22 dp par défaut), quelle que soit la taille des tuiles. Calculé grille au repos ;
+            // le défilement le fait toujours monter avec les cartes (translationY plus bas).
+            float panelGap = Config.rawTheme(this) == null ? 22f : (float) Config.rawTheme(this).optDouble("race_panel_gap", 22);
+            dockBand.setOnBandMoved(() -> {
+                if (racePanel == null || root == null || root.getHeight() == 0) return;
+                int scrolled = grid.canScrollVertically(-1) ? grid.computeVerticalScrollOffset() : 0;
+                int[] g = new int[2], r = new int[2];
+                grid.getLocationInWindow(g);
+                root.getLocationInWindow(r);
+                float bandTopInRoot = (g[1] - r[1]) + dockBand.bandTop() + scrolled;
+                int bottom = Math.max(0, Math.round(root.getHeight() - bandTopInRoot + panelGap * density));
+                FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) racePanel.getLayoutParams();
+                if (Math.abs(lp.bottomMargin - bottom) > 1) {
+                    lp.bottomMargin = bottom;
+                    racePanel.setLayoutParams(lp);
+                }
+            });
+        }
         if (cfg.fadeRows) TopFade.attach(grid, 48 * density);
         // Reduced motion: the tiles are simply there, with no entrance (reloadApps skips it there too).
         if (animations && !reducedMotion) {
@@ -815,6 +837,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
 
         btnInputs = findViewById(R.id.btnInputs);
+        btnHome = findViewById(R.id.btnHome);
+        if (btnHome == null) btnHome = new View(this);   // layout-iw n'a pas ce bouton
+        btnHome.setOnClickListener(v -> {
+            grid.scrollToPosition(0);
+            focusTile(0);
+        });
         View btnSettings = findViewById(R.id.btnSettings);
         btnInputs.setOnClickListener(v -> showInputs());
         btnWifi.setOnClickListener(v -> openNetworkPill());
@@ -887,6 +915,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             vpnPlainInk = btnVpn.getCompoundDrawableTintList();
             makeIconOnly(btnVpn);
         }
+        applyCapsule();
         btnSettings.setOnLongClickListener(v -> {
             showSettingsMenu();
             return true;
@@ -903,13 +932,15 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 focusTile(singleRow ? lastFocused : lastFocused % COLUMNS);
                 return true;
             }
-            int firstButton = btnInputs.getVisibility() == View.VISIBLE ? R.id.btnInputs : firstTopButton().getId();
+            int firstButton = btnHome.getVisibility() == View.VISIBLE ? R.id.btnHome
+                    : btnInputs.getVisibility() == View.VISIBLE ? R.id.btnInputs : firstTopButton().getId();
             int leftButton = rtlMenuBar ? R.id.btnSettings : firstButton;
             int rightButton = rtlMenuBar ? firstButton : R.id.btnSettings;
             if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) return v.getId() == leftButton;
             return keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && v.getId() == rightButton;
         };
         btnInputs.setOnKeyListener(pillKeys);
+        btnHome.setOnKeyListener(pillKeys);
         btnWifi.setOnKeyListener(pillKeys);
         btnVpn.setOnKeyListener(pillKeys);
         btnSettings.setOnKeyListener(pillKeys);
@@ -3037,6 +3068,44 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     /** The open library came from the VPN pill (vpn_pill, no VPN app): closing it returns there while the pill still shows. */
     private boolean libraryFromVpnPill;
 
+    /**
+     * Fork de Romeo (top_bar_capsule) : les boutons du haut regroupés dans une capsule de verre, précédés d'un
+     * bouton Accueil, dans l'ordre Accueil, Bibliothèque, Sources, Wi-Fi, Paramètres.
+     */
+    private void applyCapsule() {
+        org.json.JSONObject raw = Config.rawTheme(this);
+        if (raw != null && raw.optBoolean("date_sentence_case", false)) SentenceCase.attach(findViewById(R.id.date));
+        if (raw == null || !raw.optBoolean("top_bar_capsule", false)) return;
+        LinearLayout bar = findViewById(R.id.topButtons);
+        btnHome.setVisibility(View.VISIBLE);
+        btnHome.setSelected(true);
+        if (btnLibraryTop.getVisibility() == View.VISIBLE) {
+            bar.removeView(btnLibraryTop);
+            bar.addView(btnLibraryTop, bar.indexOfChild(btnHome) + 1);
+        }
+        int pad = Math.round(7 * density);
+        bar.setBackgroundResource(R.drawable.capsule_bg);
+        bar.setPadding(pad, pad, pad, pad);
+        bar.setGravity(Gravity.CENTER_VERTICAL);
+        boolean first = true;
+        for (int k = 0; k < bar.getChildCount(); k++) {
+            View b = bar.getChildAt(k);
+            if (b == btnVpn && b.getVisibility() != View.VISIBLE) continue;
+            b.setBackgroundResource(R.drawable.capsule_item_bg);
+            LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) b.getLayoutParams();
+            int side = Math.round(38 * density), inset = Math.round(8 * density);
+            lp.width = side; lp.height = side;
+            b.setPaddingRelative(inset, 0, inset, 0);
+            lp.setMarginStart(first ? 0 : Math.round(6 * density));
+            b.setLayoutParams(lp);
+            if (b.getVisibility() == View.VISIBLE) first = false;
+        }
+        RelativeLayout.LayoutParams tlp = (RelativeLayout.LayoutParams) bar.getLayoutParams();
+        tlp.bottomMargin = 0;
+        tlp.setMarginEnd(Math.round(-25 * density));   // le design la colle à 31 dp du bord droit
+        bar.setLayoutParams(tlp);
+    }
+
     /** Turns a labelled top pill into the round TopButtonIcon shape: no text, the icon centred by even padding. */
     private void makeIconOnly(TextView pill) {
         pill.setContentDescription(pill.getText());
@@ -3404,6 +3473,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
         // Compact: as wide as the Inputs pill (a touch wider so "HDMI 1" fits), hanging right below it.
         int width = Math.max(anchor.getWidth(), (int) (150 * density));
+        // inputs_popup_width (fork de Romeo) : la largeur du menu Sources en dp, comme dans le design.
+        org.json.JSONObject rawTheme = Config.rawTheme(this);
+        int themedWidth = rawTheme == null ? 0 : rawTheme.optInt("inputs_popup_width", 0);
+        if (themedWidth > 0) width = Math.round(themedWidth * density);
         final PopupWindow popup = glassPopup(panel, width);
 
         TvInputManager tim = (TvInputManager) getSystemService(TV_INPUT_SERVICE);
@@ -3588,7 +3661,20 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         popup.setWidth(Math.max(width, Math.min(panel.getMeasuredWidth(), (int) (360 * density))));
 
         int alignment = getResources().getBoolean(R.bool.rtl_menu_bar) != underGear ? Gravity.END : Gravity.START;
-        dropIn(popup, panel, anchor, alignment);
+        // inputs_popup_style "smoke" et inputs_popup_offset [x, y] en dp (fork de Romeo) : le menu Sources
+        // de son design, en verre fumé, posé à cet écart du bouton Sources.
+        if (rawTheme != null && "smoke".equals(rawTheme.optString("inputs_popup_style"))) {
+            panel.setBackgroundResource(R.drawable.smoke_panel);
+            int pad = Math.round(11 * density);
+            panel.setPadding(pad, pad, pad, pad);
+        }
+        org.json.JSONArray offset = rawTheme == null ? null : rawTheme.optJSONArray("inputs_popup_offset");
+        if (offset != null && offset.length() == 2) {
+            dropIn(popup, panel, anchor, Gravity.START,
+                    Math.round((float) offset.optDouble(0) * density), Math.round((float) offset.optDouble(1) * density));
+        } else {
+            dropIn(popup, panel, anchor, alignment);
+        }
         for (int i = 0; i < rows.getChildCount(); i++) {
             View child = rows.getChildAt(i);
             if (child.getVisibility() == View.VISIBLE && child.isFocusable()) { child.requestFocus(); break; }
@@ -3615,11 +3701,15 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     /** Drop in: fade and unfold from the top edge, hanging under the anchor pill. */
     private void dropIn(PopupWindow popup, View panel, View anchor, int gravity) {
+        dropIn(popup, panel, anchor, gravity, 0, (int) (10 * density));
+    }
+
+    private void dropIn(PopupWindow popup, View panel, View anchor, int gravity, int xOff, int yOff) {
         panel.setAlpha(0f);
         panel.setPivotY(0f);
         panel.setScaleY(0.92f);
         panel.setTranslationY(-8 * density);
-        popup.showAsDropDown(anchor, 0, (int) (10 * density), gravity);
+        popup.showAsDropDown(anchor, xOff, yOff, gravity);
         panel.animate().alpha(1f).scaleY(1f).translationY(0f).setDuration(reducedMotion ? Motion.REDUCED_MS : 220)
                 .setInterpolator(new android.view.animation.DecelerateInterpolator(1.6f)).start();
     }
