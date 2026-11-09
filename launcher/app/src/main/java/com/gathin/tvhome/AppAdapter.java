@@ -283,6 +283,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         // Some system apps declare two leanback entry points under one name (Sony's Timers & Clock on the
         // BRAVIA VU31), which would show as two identical tiles: keep the first per package and label.
         Set<String> seen = new HashSet<>();
+        WeatherTile weatherTile = WeatherTile.fromTheme(ctx);
         for (ResolveInfo ri : found) {
             if (ri.activityInfo == null) continue;
             String pkg = ri.activityInfo.packageName;
@@ -305,11 +306,25 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             // The icon is only drawn (and sampled for the glow) when there is no banner, so a tile with a
             // banner skips loading and decoding it.
             Drawable icon = banner == null ? ri.loadIcon(pm) : null;
-            if (card != null) {
+            if (card != null && weatherTile != null && pkg.equals(weatherTile.pkg)) {
+                // weather_tile (fork de Romeo) : le titre et la météo du moment dans la tuile, sans légende dessous.
+                fresh.add(new Entry(Entry.CARD, weatherTile.title, component, weatherTile.banner(ctx), null, null, card.accent));
+            } else if (card != null) {
                 fresh.add(new Entry(Entry.CARD, label, component, banner, icon, card.caption, card.accent));
             } else {
                 fresh.add(new Entry(label, component, banner, icon));
             }
+        }
+        // Fork de Romeo : une tuile par clé "input.<nom>" de launch_actions (ex. "input.hdmi1=input:<id>"),
+        // nommée par app_labels et illustrée par app_banners ; elle bascule sur l'entrée au lieu d'ouvrir une app.
+        for (Map.Entry<String, String> a : launchActions.entrySet()) {
+            String key = a.getKey();
+            if (key == null || !key.startsWith("input.") || LaunchActions.inputId(a.getValue()) == null) continue;
+            if (hidden.contains(key)) continue;
+            String label = appLabels.containsKey(key) ? appLabels.get(key) : key.substring(6).toUpperCase();
+            Drawable banner = bundledBanner(appBanners.get(key));
+            if (banner == null) banner = ctx.getDrawable(R.drawable.banner_tv);
+            fresh.add(new Entry(label, new ComponentName(key, "tile"), banner, null));
         }
         Collections.sort(fresh, (a, b) -> {
             // The owner's own order first; tiles it does not know (new installs) follow by the rule below.

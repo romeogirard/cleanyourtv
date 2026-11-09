@@ -30,5 +30,11 @@
             </intent-filter>
             <meta-data android:name="com.gathin.tvhome.card" android:resource="@xml/module_card" />
         </activity>
+
+        <!-- Ajout de Romeo : la météo du moment pour la tuile du launcher (NowProvider), en lecture seule. -->
+        <provider
+            android:name=".NowProvider"
+            android:authorities="io.github.sumyabazar1.weather.now"
+            android:exported="true" />
     </application>
 </manifest>

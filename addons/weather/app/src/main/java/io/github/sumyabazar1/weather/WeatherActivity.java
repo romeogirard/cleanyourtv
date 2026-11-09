@@ -116,6 +116,7 @@ public final class WeatherActivity extends Activity {
             main.post(() -> {
                 if (isDestroyed() || !resumed || request != requestId) return;
                 if (result != null) {
+                    NowProvider.store(this, result);
                     lastReport = result;
                     updatedAt = new Date();
                     show(result);
