@@ -1,0 +1,178 @@
+{
+  "live_tv_package": "com.tcl.tv",
+  "clock_format": "24",
+  "tile_menu": true,
+  "app_library": true,
+  "dock_apps": [
+    "com.netflix.ninja",
+    "com.google.android.youtube.tv",
+    "com.amazon.amazonvideo.livingroom",
+    "ca.bellmedia.cravetv",
+    "input.hdmi1",
+    "input.hdmi2"
+  ],
+  "wallpaper": true,
+  "wallpaper_rotation_minutes": 60,
+  "wallpaper_order": "sequential",
+  "wallpaper_captions": false,
+  "wallpaper_true_color": true,
+  "wallpaper_dim": 10,
+  "background_color": "#000000",
+  "show_greeting": false,
+  "date_below_clock": false,
+  "header_white": false,
+  "icon_only_buttons": true,
+  "icon_only_inputs": true,
+  "wifi_label_width": 0,
+  "library_button": true,
+  "show_library_pill": false,
+  "columns": 6,
+  "dock_row": true,
+  "single_row": false,
+  "rows_below_dock": 0,
+  "dock_glass": false,
+  "dock_band": true,
+  "dock_even_padding": true,
+  "dock_opacity": 70,
+  "dock_title": false,
+  "ambient_glow": false,
+  "app_glow": false,
+  "cinematic_home": false,
+  "glass_style": "rim",
+  "focus_overshoot": false,
+  "advanced_effects": false,
+  "fade_rows": false,
+  "clock_wallpaper": true,
+  "clock_wallpaper_dim": 0,
+  "clock_glow": false,
+  "top_bar_capsule": true,
+  "launch_actions": [
+    "input.hdmi1=input:com.tcl.tvinput/.passthroughinput.TvPassThroughService/HW1413744128",
+    "input.hdmi2=input:com.tcl.tvinput/.passthroughinput.TvPassThroughService/HW1413744384",
+    "input.hdmi3=input:com.tcl.tvinput/.passthroughinput.TvPassThroughService/HW1413744640"
+  ],
+  "app_labels": [
+    "input.hdmi1=HDMI 1 (PS5)",
+    "input.hdmi2=HDMI 2 (Nintendo Switch)",
+    "input.hdmi3=HDMI 3 (Mac)"
+  ],
+  "app_banners": [
+    "input.hdmi1=banner_hdmi1",
+    "input.hdmi2=banner_hdmi2",
+    "input.hdmi3=banner_hdmi3"
+  ],
+  "clock_layout": {
+    "x": 70,
+    "y": 206,
+    "clock_size": 98,
+    "clock_font": "light",
+    "clock_alpha": 92,
+    "clock_spacing": -0.075,
+    "date_beside": true,
+    "date_size": 15.75,
+    "date_font": "regular",
+    "date_alpha": 88,
+    "date_caps": false,
+    "date_spacing": 0,
+    "date_gap": 14,
+    "date_format": "EEEE d MMMM",
+    "date_sentence_case": true
+  },
+  "inputs_popup_width": 278,
+  "inputs_popup_style": "smoke",
+  "inputs_popup_offset": [
+    -192,
+    19
+  ],
+  "date_sentence_case": true,
+  "clock_wallpaper_opposite": true,
+  "game_day": "io.github.justinnewman.gameday",
+  "race_calendar": [
+    {
+      "round": 21,
+      "name": "Las Vegas Grand Prix",
+      "place": "Las Vegas",
+      "sessions": [
+        {
+          "name": "FP1",
+          "start": "2026-11-20T00:30:00Z"
+        },
+        {
+          "name": "FP2",
+          "start": "2026-11-20T04:00:00Z"
+        },
+        {
+          "name": "FP3",
+          "start": "2026-11-21T00:30:00Z"
+        },
+        {
+          "name": "QUALIFYING",
+          "start": "2026-11-21T04:00:00Z"
+        },
+        {
+          "name": "RACE",
+          "start": "2026-11-22T04:00:00Z"
+        }
+      ]
+    },
+    {
+      "round": 22,
+      "name": "Qatar Grand Prix",
+      "place": "Lusail",
+      "sessions": [
+        {
+          "name": "FP1",
+          "start": "2026-11-27T13:30:00Z"
+        },
+        {
+          "name": "FP2",
+          "start": "2026-11-27T17:00:00Z"
+        },
+        {
+          "name": "FP3",
+          "start": "2026-11-28T14:30:00Z"
+        },
+        {
+          "name": "QUALIFYING",
+          "start": "2026-11-28T18:00:00Z"
+        },
+        {
+          "name": "RACE",
+          "start": "2026-11-29T16:00:00Z"
+        }
+      ]
+    },
+    {
+      "round": 23,
+      "name": "Abu Dhabi Grand Prix",
+      "place": "Abu Dhabi",
+      "sessions": [
+        {
+          "name": "FP1",
+          "start": "2026-12-04T09:30:00Z"
+        },
+        {
+          "name": "FP2",
+          "start": "2026-12-04T13:00:00Z"
+        },
+        {
+          "name": "FP3",
+          "start": "2026-12-05T10:30:00Z"
+        },
+        {
+          "name": "QUALIFYING",
+          "start": "2026-12-05T14:00:00Z"
+        },
+        {
+          "name": "RACE",
+          "start": "2026-12-06T13:00:00Z"
+        }
+      ]
+    }
+  ],
+  "weather_tile": {
+    "package": "io.github.sumyabazar1.weather",
+    "title": "Météo",
+    "color": "#3E7FA8"
+  }
+}
