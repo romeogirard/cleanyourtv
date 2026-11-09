@@ -799,6 +799,13 @@ final class Config {
      * start before the card is mounted (seen at every boot on a Xiaomi MiTV-MTEQ0), and without the copy it comes
      * up with the built-in dock order. A missing file on mounted storage still means no overlay.
      */
+    /** Fork de Romeo : le thème tel quel, pour les clés que ce fork ajoute (top_bar_capsule). */
+    static JSONObject rawTheme(Context ctx) {
+        File dir = dir(ctx);
+        JSONObject json = read(dir != null ? new File(dir, FILE_NAME) : null);
+        return json != null ? json : read(new File(ctx.getFilesDir(), FILE_NAME));
+    }
+
     private static JSONObject readOverlay(Context ctx, File file, boolean mounted) {
         File copy = new File(ctx.getFilesDir(), FILE_NAME);
         if (!mounted) return read(copy);
