@@ -37,9 +37,9 @@
         android:id="@+id/racePanel"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="top|left"
+        android:layout_gravity="bottom|left"
         android:layout_marginStart="60dp"
-        android:layout_marginTop="158dp"
+        android:layout_marginBottom="150dp"
         android:orientation="vertical"
         android:focusable="false"
         android:importantForAccessibility="no"
@@ -57,7 +57,7 @@
                 android:layout_height="13dp"
                 android:layout_marginEnd="10dp"
                 android:id="@+id/raceBar"
-                android:background="@drawable/race_bar" />
+                android:background="#E6FFFFFF" />
 
             <TextView
                 android:id="@+id/raceKicker"
@@ -65,9 +65,9 @@
                 android:layout_height="wrap_content"
                 android:singleLine="true"
                 android:textColor="#B3FFFFFF"
-                android:textSize="12sp"
+                android:textSize="13sp"
                 android:fontFamily="@string/font_medium"
-                android:letterSpacing="0.22"
+                android:letterSpacing="0.12"
                 android:textAllCaps="true" />
         </LinearLayout>
 
@@ -75,24 +75,24 @@
             android:id="@+id/raceHeadline"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="6dp"
             android:singleLine="true"
             android:textColor="#FFFFFFFF"
-            android:textSize="34sp"
-            android:fontFamily="@string/font_light"
-            android:letterSpacing="-0.01"
+            android:textSize="22sp"
+            android:fontFamily="@string/font_regular"
+            android:letterSpacing="0"
             android:includeFontPadding="false" />
 
         <TextView
             android:id="@+id/raceSessions"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="6dp"
             android:singleLine="true"
-            android:textColor="#99FFFFFF"
-            android:textSize="12sp"
-            android:fontFamily="@string/font_medium"
-            android:letterSpacing="0.12" />
+            android:textColor="#BFFFFFFF"
+            android:textSize="13sp"
+            android:fontFamily="@string/font_regular"
+            android:letterSpacing="0" />
 
         <!-- game_day: one dot per turn when the panel rotates between games (and the F1 weekend). -->
         <LinearLayout
@@ -212,7 +212,7 @@
                         android:format12Hour="h:mm"
                         android:format24Hour="HH:mm"
                         android:textColor="#FFFFFFFF"
-                        android:textSize="52sp"
+                        android:textSize="46sp"
                         android:fontFamily="@string/font_light"
                         android:letterSpacing="-0.04"
                         android:includeFontPadding="false" />
@@ -277,10 +277,10 @@
                             android:format12Hour="@string/date_format_home"
                             android:format24Hour="@string/date_format_home"
                             android:textColor="#A6FFFFFF"
-                            android:textSize="14sp"
+                            android:textSize="13sp"
                             android:fontFamily="@string/font_regular"
-                            android:letterSpacing="0.14"
-                            android:textAllCaps="true" />
+                            android:letterSpacing="0"
+                            android:textAllCaps="false" />
 
                         <!-- Lunar date ("Lunar 13/9 · Year of the Horse"), shown when lunar_date is on. -->
                         <TextView
@@ -331,6 +331,15 @@
                 android:clipChildren="false"
                 android:clipToPadding="false"
                 android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/btnHome"
+                    style="@style/TopButtonIcon"
+                    android:layout_marginStart="0dp"
+                    android:visibility="gone"
+                    android:contentDescription="@string/home_button"
+                    android:drawableStart="@drawable/ic_home"
+                    android:nextFocusDown="@+id/grid" />
 
                 <TextView
                     android:id="@+id/btnInputs"
