@@ -57,6 +57,8 @@
     <string name="animations_state">Animations : %1$s</string>
     <string name="advanced_effects">Effets avancés</string>
     <string name="advanced_effects_state">Effets avancés : %1$s</string>
+    <string name="light_mode_state">Mode léger : %1$s</string>
+    <string name="reduced_motion_state">Mouvement réduit : %1$s</string>
     <string name="open_on_start_label">Ouvrir au démarrage</string>
     <string name="open_on_start_state">Ouvrir au démarrage: %1$s</string>
     <string name="advanced_effects_warning">Soulève les tuiles, agrandit les icônes et adoucit les transitions de couleur. Peut augmenter la mémoire utilisée selon le téléviseur.</string>

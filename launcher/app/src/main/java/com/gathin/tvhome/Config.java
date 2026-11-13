@@ -432,6 +432,15 @@ final class Config {
         return ctx.getExternalFilesDir(null);
     }
 
+    /**
+     * Fork de Romeo : le mode léger coupe les animations, les effets avancés et le verre du dock, et réduit le
+     * mouvement. Réglage de la télé d'abord, puis clé de thème light_mode (faux par défaut).
+     */
+    static boolean lightModeOn(Context ctx, JSONObject themeJson) {
+        SharedPreferences choices = ctx.getSharedPreferences(SETTINGS_NAME, Context.MODE_PRIVATE);
+        return choices.getBoolean("light_mode", themeJson != null && themeJson.optBoolean("light_mode", false));
+    }
+
     static Config load(Context ctx) {
         Resources res = ctx.getResources();
         List<String> dock = new ArrayList<>(Arrays.asList(res.getStringArray(R.array.dock_apps)));
@@ -671,6 +680,14 @@ final class Config {
         if (chosenRows >= 0 && chosenRows <= 3) rowsBelow = chosenRows;
         animations = choices.getBoolean("animations", animations);
         advancedEffects = choices.getBoolean("advanced_effects", advancedEffects);
+        // Fork de Romeo : mode léger et mouvement réduit, aussi réglables sur la télé (Paramètres du launcher).
+        reducedMotion = choices.getBoolean("reduced_motion", reducedMotion);
+        if (lightModeOn(ctx, json)) {
+            animations = false;
+            advancedEffects = false;
+            reducedMotion = true;
+            dockGlass = false;
+        }
         File wallpaper = dir != null ? new File(dir, WALLPAPER_NAME) : null;
         if (wallpaper != null && !(wallpaper.isFile() && wallpaper.length() > 0)) wallpaper = null;
         // A theme can also switch the wallpaper off while the file is still there.

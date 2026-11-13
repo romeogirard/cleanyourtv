@@ -37,6 +37,8 @@ public final class LauncherSettingsActivity extends Activity {
     private TextView wallpaperChoice;
     private TextView animationsChoice;
     private TextView advancedChoice;
+    private TextView lightChoice;
+    private TextView reducedChoice;
     private TextView followThemeChoice;
     private TextView openOnStartChoice;
     private int columns;
@@ -45,6 +47,8 @@ public final class LauncherSettingsActivity extends Activity {
     private String clockFormat;
     private boolean animations;
     private boolean advancedEffects;
+    private boolean lightMode;
+    private boolean reducedMotion;
 
     @Override
     protected void onCreate(Bundle state) {
@@ -64,6 +68,8 @@ public final class LauncherSettingsActivity extends Activity {
         clockFormat = config.clockFormat;
         animations = config.animations;
         advancedEffects = config.animations && config.advancedEffects;
+        lightMode = Config.lightModeOn(this, Config.rawTheme(this));
+        reducedMotion = config.reducedMotion;
 
         int[] ids = {R.id.columns4, R.id.columns5, R.id.columns6, R.id.columns7};
         for (int i = 0; i < ids.length; i++) {
@@ -147,6 +153,21 @@ public final class LauncherSettingsActivity extends Activity {
                         .show();
             }
         });
+        lightChoice = findViewById(R.id.lightChoice);
+        lightChoice.setOnClickListener(v -> {
+            lightMode = !lightMode;
+            choices.edit().putBoolean("light_mode", lightMode).apply();
+            changed();
+            refresh();
+        });
+        reducedChoice = findViewById(R.id.reducedChoice);
+        reducedChoice.setOnClickListener(v -> {
+            if (lightMode) return;   // le mode léger réduit déjà le mouvement
+            reducedMotion = !reducedMotion;
+            choices.edit().putBoolean("reduced_motion", reducedMotion).apply();
+            changed();
+            refresh();
+        });
         openOnStartChoice = findViewById(R.id.openOnStartChoice);
         if (config.openOnStartChoice) {
             openOnStartChoice.setVisibility(View.VISIBLE);
@@ -156,7 +177,7 @@ public final class LauncherSettingsActivity extends Activity {
         followThemeChoice.setOnClickListener(v -> {
             if (!hasOnTvChoices()) return;
             choices.edit().remove("columns").remove(Config.ROWS_BELOW_DOCK_KEY).remove("animations")
-                    .remove("advanced_effects").remove(Config.WALLPAPER_CHOICE_KEY)
+                    .remove("advanced_effects").remove("light_mode").remove("reduced_motion").remove(Config.WALLPAPER_CHOICE_KEY)
                     .remove(Config.DOCK_OPACITY_KEY).remove(Config.CLOCK_FORMAT_KEY).remove(OpenOnStart.KEY).commit();
             Config current = Config.load(this);
             columns = current.columns;
@@ -165,6 +186,8 @@ public final class LauncherSettingsActivity extends Activity {
             clockFormat = current.clockFormat;
             animations = current.animations;
             advancedEffects = current.animations && current.advancedEffects;
+            lightMode = Config.lightModeOn(this, Config.rawTheme(this));
+            reducedMotion = current.reducedMotion;
             changed();
             refresh();
         });
@@ -311,6 +334,11 @@ public final class LauncherSettingsActivity extends Activity {
                 getString(advancedEffects ? R.string.on : R.string.off)));
         advancedChoice.setEnabled(animations);
         advancedChoice.setAlpha(animations ? 1f : 0.5f);
+        lightChoice.setText(getString(R.string.light_mode_state, getString(lightMode ? R.string.on : R.string.off)));
+        reducedChoice.setText(getString(R.string.reduced_motion_state,
+                getString(lightMode || reducedMotion ? R.string.on : R.string.off)));
+        reducedChoice.setEnabled(!lightMode);
+        reducedChoice.setAlpha(lightMode ? 0.5f : 1f);
         String wallpaperCurrent = choices.getString(Config.WALLPAPER_CHOICE_KEY, null);
         wallpaperChoice.setText(getString(R.string.wallpaper_state,
                 "none".equals(wallpaperCurrent) ? getString(R.string.wallpaper_none)
@@ -323,6 +351,7 @@ public final class LauncherSettingsActivity extends Activity {
     private boolean hasOnTvChoices() {
         return choices.contains("columns") || choices.contains(Config.ROWS_BELOW_DOCK_KEY)
                 || choices.contains("animations") || choices.contains("advanced_effects")
+                || choices.contains("light_mode") || choices.contains("reduced_motion")
                 || choices.contains(Config.WALLPAPER_CHOICE_KEY) || choices.contains(Config.DOCK_OPACITY_KEY)
                 || choices.contains(Config.CLOCK_FORMAT_KEY) || choices.contains(OpenOnStart.KEY);
     }
