@@ -581,6 +581,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         stats = findViewById(R.id.stats);
         raceCalendar = cfg.raceCalendar;
         racePanel = findViewById(R.id.racePanel);
+        resumePanel = findViewById(R.id.resumePanel);
+        resumeEnabled = ResumeSource.enabled(this);
+        if (resumeEnabled) setUpResumePanel();
         raceKicker = findViewById(R.id.raceKicker);
         raceHeadline = findViewById(R.id.raceHeadline);
         raceSessions = findViewById(R.id.raceSessions);
@@ -711,6 +714,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                     lp.bottomMargin = bottom;
                     racePanel.setLayoutParams(lp);
                 }
+                if (resumePanel != null) {
+                    FrameLayout.LayoutParams rl = (FrameLayout.LayoutParams) resumePanel.getLayoutParams();
+                    if (Math.abs(rl.bottomMargin - bottom) > 1) {
+                        rl.bottomMargin = bottom;
+                        resumePanel.setLayoutParams(rl);
+                    }
+                }
             });
         }
         if (cfg.fadeRows) TopFade.attach(grid, 48 * density);
@@ -794,15 +804,18 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         // game_day: the panel above the dock rides up with the cards instead of being covered by them, and fades
         // out by the time it reaches the clock. The grid's own offset is read, so a jump (Home, a restored focus)
         // lands right too.
-        if (gameDay != null) {
+        if (gameDay != null || resumeEnabled) {
             View clockBlock = findViewById(R.id.leftBlock);
             grid.addOnScrollListener(new RecyclerView.OnScrollListener() {
                 @Override
                 public void onScrolled(@NonNull RecyclerView rv, int dx, int dy) {
                     int shift = rv.canScrollVertically(-1) ? rv.computeVerticalScrollOffset() : 0;
-                    racePanel.setTranslationY(-shift);
-                    int room = Math.max(1, racePanel.getTop() - clockBlock.getBottom());
-                    racePanel.setAlpha(Math.max(0f, 1f - shift / (float) room));
+                    for (View panel : new View[]{racePanel, resumePanel}) {
+                        if (panel == null) continue;
+                        panel.setTranslationY(-shift);
+                        int room = Math.max(1, panel.getTop() - clockBlock.getBottom());
+                        panel.setAlpha(Math.max(0f, 1f - shift / (float) room));
+                    }
                 }
             });
         }
@@ -1124,6 +1137,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         super.onResume();
         resumed = true;
         if (clockWeather != null) clockWeather.refresh(this);
+        loadResume();
         // A festival that started or ended while Home was in the background: rebuild with or without it.
         if (festive != festival.active(LocalDate.now())) {
             recreate();
@@ -2491,7 +2505,17 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                     rtlAppGrid, keyCode == KeyEvent.KEYCODE_DPAD_LEFT);
         }
         if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
-            if (position < COLUMNS) return false;          // dock row: let focus move to the top bar
+            if (position < COLUMNS) {
+                // resume_card : la carte au-dessus du dock prend le focus d'abord ; Haut encore mène à la barre du haut.
+                if (resumePanel != null && resumePanel.getVisibility() == View.VISIBLE && resumeItem != null) {
+                    hideGlass();
+                    hideHero();
+                    resumePanel.requestFocus();
+                    grid.playSoundEffect(SoundEffectConstants.NAVIGATION_UP);
+                    return true;
+                }
+                return false;          // dock row: let focus move to the top bar
+            }
             target = position - COLUMNS;
         } else {
             int lastRowStart = ((count - 1) / COLUMNS) * COLUMNS;
@@ -2818,9 +2842,15 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private void updatePanel() {
         if (gameDay == null) {
             updateRace();
+            showResume(racePanel.getVisibility() != View.VISIBLE);
             return;
         }
         handler.removeCallbacks(turnTick);
+        // Sur la carte de reprise avec le focus : elle reste là, la rotation attend.
+        if (resumePanel != null && resumePanel.hasFocus()) {
+            if (!stopped) handler.postDelayed(turnTick, 5000);
+            return;
+        }
         long now = System.currentTimeMillis();
         List<GameDay.Turn> games = gameDay.turns();
         for (GameDay.Turn g : games) {
@@ -2833,13 +2863,23 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
         RaceWeekend.State f1 = raceCalendar.isEmpty() ? null : RaceWeekend.at(raceCalendar, java.time.Instant.ofEpochMilli(now));
         List<GameDay.Turn> turns = GameDay.merge(games, f1, now);
-        if (turns.isEmpty()) {
+        boolean hasResume = resumeItem != null && resumePanel != null;
+        int total = turns.size() + (hasResume ? 1 : 0);   // la reprise de lecture est un tour de plus
+        if (total == 0) {
             racePanel.setVisibility(View.GONE);
+            showResume(false);
             return;
         }
         int seconds = gameDay.turnSeconds();
         long since = SystemClock.elapsedRealtime() - rotationStart;
-        int on = GameDay.current(turns.size(), since, seconds);
+        int on = GameDay.current(total, since, seconds);
+        if (hasResume && on == turns.size()) {
+            racePanel.setVisibility(View.GONE);
+            showResume(true);
+            if (total > 1 && !stopped) handler.postDelayed(turnTick, GameDay.delayToNextTurn(since, seconds));
+            return;
+        }
+        showResume(false);
         GameDay.Turn t = turns.get(on);
         if (t.f1) {
             raceBar.setBackgroundResource(R.drawable.race_bar);
@@ -2863,8 +2903,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             raceSessions.setVisibility(View.GONE);
             racePanel.setVisibility(View.VISIBLE);
         }
-        showPager(turns.size(), on);
-        if (turns.size() > 1 && !stopped) handler.postDelayed(turnTick, GameDay.delayToNextTurn(since, seconds));
+        showPager(total, on);
+        if (total > 1 && !stopped) handler.postDelayed(turnTick, GameDay.delayToNextTurn(since, seconds));
     }
 
     /** One dot per turn, the one on screen bright; none for a single turn. */
@@ -2935,6 +2975,125 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
         raceSessions.setText(row);
         racePanel.setVisibility(View.VISIBLE);
+    }
+
+    // ---- resume_card (fork de Romeo) ---------------------------------------------------------------
+
+    private void setUpResumePanel() {
+        float r = 10 * density;
+        View box = findViewById(R.id.resumeThumbBox);
+        ImageView thumb = findViewById(R.id.resumeThumb);
+        thumb.setOutlineProvider(new android.view.ViewOutlineProvider() {
+            @Override
+            public void getOutline(View view, android.graphics.Outline outline) {
+                outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), r);
+            }
+        });
+        thumb.setClipToOutline(true);
+        GradientDrawable ring = new GradientDrawable();
+        ring.setCornerRadius(r + 3 * density);
+        ring.setColor(0x00000000);
+        box.setBackground(ring);
+        resumePanel.setOnFocusChangeListener((v, focused) -> {
+            ring.setStroke(focused ? Math.round(2.5f * density) : 0, 0xE6FFFFFF);
+            resumePanel.animate().scaleX(focused && !reducedMotion ? 1.03f : 1f)
+                    .scaleY(focused && !reducedMotion ? 1.03f : 1f)
+                    .setDuration(reducedMotion ? Motion.REDUCED_MS : 160).start();
+        });
+        resumePanel.setOnKeyListener((v, keyCode, event) -> {
+            if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
+            switch (keyCode) {
+                case KeyEvent.KEYCODE_DPAD_DOWN:
+                    focusTile(singleRow ? lastFocused : lastFocused % COLUMNS);   // retour sur la tuile d'où on vient
+                    return true;
+                case KeyEvent.KEYCODE_DPAD_LEFT:
+                case KeyEvent.KEYCODE_DPAD_RIGHT:
+                    return true;
+                default:
+                    return false;
+            }
+        });
+        resumePanel.setOnClickListener(v -> openResume());
+    }
+
+    /** Relit « Continuer à regarder » hors du fil principal ; sans la permission, la carte ne s'affiche jamais. */
+    private void loadResume() {
+        if (!resumeEnabled || !ResumeSource.permitted(this)) return;
+        Context app = getApplicationContext();
+        resumeIo.execute(() -> {
+            ResumeSource.Item item = ResumeSource.read(app);
+            handler.post(() -> {
+                if (isFinishing() || isDestroyed()) return;
+                resumeItem = item;
+                bindResume();
+                updatePanel();
+            });
+        });
+    }
+
+    private void bindResume() {
+        if (resumeItem == null) {
+            showResume(false);
+            return;
+        }
+        ResumeSource.Item it = resumeItem;
+        ((TextView) findViewById(R.id.resumeTitle)).setText(it.title);
+        long minutes = Math.max(1, (it.leftMs + 59_999) / 60_000);
+        ((TextView) findViewById(R.id.resumeSub)).setText(minutes >= 60
+                ? getString(R.string.resume_hour_left, (int) (minutes / 60), (int) (minutes % 60))
+                : getString(R.string.resume_min_left, (int) minutes));
+        ImageView thumb = findViewById(R.id.resumeThumb);
+        if (it.poster != null) {
+            thumb.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            thumb.setBackgroundColor(0x00000000);
+            thumb.setImageBitmap(it.poster);
+        } else {
+            // Pas d'affiche lisible hors ligne : l'icône de l'app sur un fond sombre.
+            thumb.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+            thumb.setBackgroundColor(0xFF2A2826);
+            thumb.setPadding(Math.round(18 * density), Math.round(12 * density), Math.round(18 * density), Math.round(20 * density));
+            try {
+                thumb.setImageDrawable(it.pkg == null ? null : getPackageManager().getApplicationIcon(it.pkg));
+            } catch (PackageManager.NameNotFoundException e) {
+                thumb.setImageDrawable(null);
+            }
+        }
+        View fill = findViewById(R.id.resumeFill);
+        View track = findViewById(R.id.resumeTrack);
+        track.post(() -> {
+            ViewGroup.LayoutParams lp = fill.getLayoutParams();
+            lp.width = Math.max(1, Math.round(track.getWidth() * it.progress));
+            fill.setLayoutParams(lp);
+        });
+    }
+
+    private void showResume(boolean show) {
+        if (resumePanel == null) return;
+        boolean want = show && resumeItem != null;
+        if (!want) {
+            if (resumePanel.getVisibility() == View.VISIBLE) {
+                boolean hadFocus = resumePanel.hasFocus();
+                resumePanel.setVisibility(View.GONE);
+                if (hadFocus) focusTile(lastFocused);
+            }
+        } else if (resumePanel.getVisibility() != View.VISIBLE) {
+            resumePanel.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private void openResume() {
+        ResumeSource.Item it = resumeItem;
+        if (it == null) return;
+        try {
+            Intent intent = Intent.parseUri(it.intentUri, Intent.URI_INTENT_SCHEME);
+            intent.setSelector(null);
+            // Une adresse web sans app désignée irait au navigateur : on la fait ouvrir par l'app qui l'a publiée.
+            if (intent.getComponent() == null && intent.getPackage() == null && it.pkg != null) intent.setPackage(it.pkg);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(intent);
+        } catch (java.net.URISyntaxException | RuntimeException e) {
+            Toast.makeText(this, getString(R.string.cant_open, it.title), Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void refreshPillsAfterNextDraw() {

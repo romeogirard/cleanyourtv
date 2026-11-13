@@ -161,4 +161,6 @@
     <string name="clock_format_12">12-hour</string>
     <string name="clock_format_24">24-hour</string>
     <string name="home_button" translatable="false">Accueil</string>
+    <string name="resume_min_left">%1$d min left</string>
+    <string name="resume_hour_left">%1$d h %2$02d left</string>
 </resources>

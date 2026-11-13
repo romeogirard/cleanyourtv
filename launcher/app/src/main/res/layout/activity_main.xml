@@ -104,6 +104,86 @@
             android:visibility="gone" />
     </LinearLayout>
 
+    <!-- Fork de Romeo (resume_card) : la dernière lecture en cours, à la place du panneau de match, qu'elle
+         partage en alternance. Se pose au-dessus de la bande du dock (voir MainActivity). -->
+    <LinearLayout
+        android:id="@+id/resumePanel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|left"
+        android:layout_marginStart="60dp"
+        android:layout_marginBottom="150dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:focusable="true"
+        android:clickable="true"
+        android:visibility="gone">
+
+        <FrameLayout
+            android:id="@+id/resumeThumbBox"
+            android:layout_width="150dp"
+            android:layout_height="87dp"
+            android:padding="3dp">
+
+            <ImageView
+                android:id="@+id/resumeThumb"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:importantForAccessibility="no"
+                android:scaleType="centerCrop" />
+
+            <View
+                android:id="@+id/resumeTrack"
+                android:layout_width="match_parent"
+                android:layout_height="3dp"
+                android:layout_gravity="bottom"
+                android:layout_marginStart="8dp"
+                android:layout_marginEnd="8dp"
+                android:layout_marginBottom="8dp"
+                android:background="#4DFFFFFF" />
+
+            <View
+                android:id="@+id/resumeFill"
+                android:layout_width="0dp"
+                android:layout_height="3dp"
+                android:layout_gravity="bottom"
+                android:layout_marginStart="8dp"
+                android:layout_marginBottom="8dp"
+                android:background="#FFFFFFFF" />
+        </FrameLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="17dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/resumeTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:maxWidth="420dp"
+                android:singleLine="true"
+                android:ellipsize="end"
+                android:textColor="#FFFFFFFF"
+                android:textSize="24sp"
+                android:fontFamily="@string/font_regular"
+                android:letterSpacing="0"
+                android:includeFontPadding="false" />
+
+            <TextView
+                android:id="@+id/resumeSub"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:singleLine="true"
+                android:textColor="#B8FFFFFF"
+                android:textSize="13sp"
+                android:fontFamily="@string/font_regular"
+                android:letterSpacing="0" />
+        </LinearLayout>
+    </LinearLayout>
+
     <!-- Cinematic top shelf: darkens the edge behind the shelf and the lower half, so the text and the
          dock stay readable over the artwork. -->
     <View
