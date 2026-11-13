@@ -65,24 +65,33 @@ final class WeatherTile {
 
     /** Lit la météo hors du fil principal et met la légende à jour quand elle arrive. */
     private static void refresh(Context ctx, Banner banner) {
+        captionAsync(ctx, text -> {
+            if (text == null) return;
+            lastCaption = text;
+            banner.setCaption(text);
+        });
+    }
+
+    /** « 4°, nuageux » : null si le module est absent, sans ville, ou si le firmware bloque l'accès. */
+    static String queryCaption(Context app) {
+        try (Cursor c = app.getContentResolver().query(NOW, null, null, null, null)) {
+            if (c != null && c.moveToFirst()) {
+                int temp = c.getInt(c.getColumnIndexOrThrow("temp"));
+                String sky = c.getString(c.getColumnIndexOrThrow("sky"));
+                return temp + "°" + (sky == null || sky.isEmpty() ? "" : ", " + sky.toLowerCase(Locale.getDefault()));
+            }
+        } catch (RuntimeException ignored) {
+            // Module absent, pas encore de ville, ou le firmware TCL qui bloque l'accès : on garde l'affichage actuel.
+        }
+        return null;
+    }
+
+    /** Lit la légende hors du fil principal ; le rappel s'exécute sur le fil principal, avec null en cas d'échec. */
+    static void captionAsync(Context ctx, java.util.function.Consumer<String> done) {
         Context app = ctx.getApplicationContext();
         IO.execute(() -> {
-            String caption = null;
-            try (Cursor c = app.getContentResolver().query(NOW, null, null, null, null)) {
-                if (c != null && c.moveToFirst()) {
-                    int temp = c.getInt(c.getColumnIndexOrThrow("temp"));
-                    String sky = c.getString(c.getColumnIndexOrThrow("sky"));
-                    caption = temp + "°" + (sky == null || sky.isEmpty() ? "" : ", " + sky.toLowerCase(Locale.getDefault()));
-                }
-            } catch (RuntimeException ignored) {
-                // Module absent, pas encore de ville, ou le firmware TCL qui bloque l'accès : la tuile garde son titre.
-            }
-            if (caption == null) return;
-            String text = caption;
-            MAIN.post(() -> {
-                lastCaption = text;
-                banner.setCaption(text);
-            });
+            String caption = queryCaption(app);
+            MAIN.post(() -> done.accept(caption));
         });
     }
 

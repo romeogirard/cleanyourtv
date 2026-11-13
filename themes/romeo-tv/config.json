@@ -46,6 +46,8 @@
   "clock_wallpaper_dim": 0,
   "clock_glow": false,
   "top_bar_capsule": true,
+  "clock_weather": true,
+  "resume_card": true,
   "launch_actions": [
     "input.hdmi1=input:com.tcl.tvinput/.passthroughinput.TvPassThroughService/HW1413744128",
     "input.hdmi2=input:com.tcl.tvinput/.passthroughinput.TvPassThroughService/HW1413744384",

@@ -199,6 +199,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private int lunarOffset;
     private TextView stats;
     private List<RaceWeekend.Race> raceCalendar;
+    private ClockWeather clockWeather;
+    // resume_card (fork de Romeo)
+    private LinearLayout resumePanel;
+    private ResumeSource.Item resumeItem;
+    private boolean resumeEnabled;
+    private final java.util.concurrent.ExecutorService resumeIo = java.util.concurrent.Executors.newSingleThreadExecutor();
     private View racePanel;
     private TextView raceKicker, raceHeadline, raceSessions;
     /** game_day: each team's next game from an add-on, rotating in the race panel; null when the key is off. */
@@ -916,6 +922,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             makeIconOnly(btnVpn);
         }
         applyCapsule();
+        clockWeather = ClockWeather.attach(this);
         btnSettings.setOnLongClickListener(v -> {
             showSettingsMenu();
             return true;
@@ -1116,6 +1123,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     protected void onResume() {
         super.onResume();
         resumed = true;
+        if (clockWeather != null) clockWeather.refresh(this);
         // A festival that started or ended while Home was in the background: rebuild with or without it.
         if (festive != festival.active(LocalDate.now())) {
             recreate();
