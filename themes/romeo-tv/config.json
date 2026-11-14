@@ -32,7 +32,7 @@
   "rows_below_dock": 0,
   "dock_glass": false,
   "dock_band": true,
-  "dock_bottom_room": 12,
+  "dock_bottom_room": 22,
   "dock_even_padding": true,
   "dock_opacity": 70,
   "dock_title": false,
@@ -51,6 +51,7 @@
   "resume_card": true,
   "resume_posters": true,
   "match_layout": "days",
+  "race_panel_gap": 14,
   "power_on_home_always": true,
   "launch_actions": [
     "input.hdmi1=input:com.tcl.tvinput/.passthroughinput.TvPassThroughService/HW1413744128",

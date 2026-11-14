@@ -109,11 +109,11 @@
     <LinearLayout
         android:id="@+id/resumePanel"
         android:layout_width="wrap_content"
-        android:layout_height="44dp"
+        android:layout_height="52dp"
         android:layout_gravity="bottom|right"
         android:layout_marginEnd="60dp"
         android:layout_marginBottom="150dp"
-        android:paddingStart="7dp"
+        android:paddingStart="8dp"
         android:paddingEnd="20dp"
         android:orientation="horizontal"
         android:gravity="center_vertical"
@@ -123,8 +123,8 @@
 
         <FrameLayout
             android:id="@+id/resumeThumbBox"
-            android:layout_width="52dp"
-            android:layout_height="30dp">
+            android:layout_width="64dp"
+            android:layout_height="36dp">
 
             <ImageView
                 android:id="@+id/resumeThumb"
@@ -156,18 +156,18 @@
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="10dp"
+            android:layout_marginStart="12dp"
             android:orientation="vertical">
 
             <TextView
                 android:id="@+id/resumeTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:maxWidth="200dp"
+                android:maxWidth="230dp"
                 android:singleLine="true"
                 android:ellipsize="end"
                 android:textColor="#FFFFFFFF"
-                android:textSize="13sp"
+                android:textSize="15sp"
                 android:fontFamily="@string/font_medium"
                 android:letterSpacing="0"
                 android:includeFontPadding="false" />
@@ -179,7 +179,7 @@
                 android:layout_marginTop="3dp"
                 android:singleLine="true"
                 android:textColor="#B8FFFFFF"
-                android:textSize="10sp"
+                android:textSize="11sp"
                 android:fontFamily="@string/font_regular"
                 android:letterSpacing="0"
                 android:includeFontPadding="false" />

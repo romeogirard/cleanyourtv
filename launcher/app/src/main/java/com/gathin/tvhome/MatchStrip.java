@@ -193,9 +193,8 @@ final class MatchStrip {
         LinearLayout col = new LinearLayout(ctx);
         col.setOrientation(LinearLayout.VERTICAL);
         TextView l = new TextView(ctx);
-        l.setText(label == null ? " " : label);
-        l.setAllCaps(true);
         l.setSingleLine(true);
+        l.setText(label == null ? " " : label.toUpperCase(Locale.getDefault()));
         l.setTextColor(0xB3FFFFFF);
         l.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
         l.setLetterSpacing(0.14f);
@@ -206,7 +205,8 @@ final class MatchStrip {
                 ViewGroup.LayoutParams.WRAP_CONTENT);
         lp.bottomMargin = dp(7);
         col.addView(l, lp);
-        col.addView(chip);
+        col.addView(chip, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT));
         return col;
     }
 
