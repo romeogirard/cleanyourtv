@@ -13,8 +13,8 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * What Home rotates through: one turn per calendar, its next entry that has not ended, if that starts within a
- * week. A game in two calendars (following both teams) is one turn, in the colour of the calendar listed first.
+ * What Home rotates through: every entry of each calendar that has not ended and starts within a week (Romeo's
+ * fork; upstream keeps only the next one). A game in two calendars (following both teams) is one turn, in the colour of the calendar listed first.
  */
 final class Schedule {
     static final Duration WINDOW = Duration.ofDays(7);
@@ -54,14 +54,14 @@ final class Schedule {
             for (Ics.Event e : sorted) {
                 Instant end = endOf(e, c.sport, zone);
                 if (!end.isAfter(now)) continue;
-                if (e.start.isBefore(horizon)) {
-                    String top = Titles.topLine(e.title, c.name);
-                    if (seen.add(top.toLowerCase(Locale.ROOT) + "|" + e.start.toEpochMilli())) {
-                        out.add(new Turn(top, Titles.word(c.sport, e.title), c.name, e.start.toEpochMilli(),
-                                end.toEpochMilli(), Palette.colour(c.colour)));
-                    }
+                // Fork de Romeo : tous les matchs de la semaine de chaque équipe, pas seulement le prochain, pour les
+                // pages Aujourd'hui / Demain / La semaine du launcher.
+                if (!e.start.isBefore(horizon)) break;
+                String top = Titles.topLine(e.title, c.name);
+                if (seen.add(top.toLowerCase(Locale.ROOT) + "|" + e.start.toEpochMilli())) {
+                    out.add(new Turn(top, Titles.word(c.sport, e.title), c.name, e.start.toEpochMilli(),
+                            end.toEpochMilli(), Palette.colour(c.colour)));
                 }
-                break;
             }
         }
         Collections.sort(out, Comparator.comparingLong(t -> t.startMs));
