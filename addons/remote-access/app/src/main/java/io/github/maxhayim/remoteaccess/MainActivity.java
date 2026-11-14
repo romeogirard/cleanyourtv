@@ -96,9 +96,10 @@ public class MainActivity extends Activity {
         boolean wireless = global("adb_wifi_enabled") == 1;
         int port = Access.port(prop("service.adb.tcp.port"));
         Access.Adb adb = Access.adb(enabled, wireless, port);
-        adbRow.setValue(armed ? "OK again: off" : Access.adbValue(adb, wireless, port));
+        adbRow.setValue(armed ? (adb == Access.Adb.OFF ? "OK again: on" : "OK again: off") : Access.adbValue(adb, wireless, port));
         if (adb == Access.Adb.OFF) {
-            adbRow.setDetail("Nobody can control this TV over the network.");
+            adbRow.setDetail(canWrite() ? "Nobody can control this TV over the network. OK twice switches it back on."
+                    : "Nobody can control this TV over the network.");
         } else if (!canWrite()) {
             adbRow.setDetail("Switch it off in Developer options (OK opens them). install.sh lets this button do it.");
         } else {
@@ -116,7 +117,8 @@ public class MainActivity extends Activity {
 
     private void adbPressed() {
         boolean on = global("adb_enabled") == 1 || global("adb_wifi_enabled") == 1;
-        if (!on) return;
+        // Fork de Romeo : le bouton marche dans les deux sens. Rallumer remet le débogage tel que la télé l'avait
+        // (adb_enabled) ; le débogage réseau suit le réglage des options pour les développeurs.
         if (!canWrite()) {
             open(new Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS));
             return;
@@ -130,8 +132,12 @@ public class MainActivity extends Activity {
         main.removeCallbacks(disarm);
         armed = false;
         try {
-            Settings.Global.putInt(getContentResolver(), "adb_wifi_enabled", 0);
-            Settings.Global.putInt(getContentResolver(), Settings.Global.ADB_ENABLED, 0);
+            if (on) {
+                Settings.Global.putInt(getContentResolver(), "adb_wifi_enabled", 0);
+                Settings.Global.putInt(getContentResolver(), Settings.Global.ADB_ENABLED, 0);
+            } else {
+                Settings.Global.putInt(getContentResolver(), Settings.Global.ADB_ENABLED, 1);
+            }
         } catch (SecurityException e) {
             open(new Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS));
         }

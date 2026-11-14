@@ -16,7 +16,7 @@ glow. On any other Android TV home it is an ordinary app.
 | **Tailscale** | Not installed, Installed and not connected, or Connected with its 100.x address. OK opens Tailscale. |
 | **Developer options** | Opens them, where debugging is switched on again. |
 
-It never switches debugging on: that stays in the TV's own Developer options.
+Romeo's fork: OK twice also switches debugging back on (`adb_enabled`), so the TV's Developer options are no longer needed for that.
 
 ## Permissions
 
