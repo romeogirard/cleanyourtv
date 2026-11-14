@@ -2842,15 +2842,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private void updatePanel() {
         if (gameDay == null) {
             updateRace();
-            showResume(racePanel.getVisibility() != View.VISIBLE);
+            showResume(true);
             return;
         }
         handler.removeCallbacks(turnTick);
-        // Sur la carte de reprise avec le focus : elle reste là, la rotation attend.
-        if (resumePanel != null && resumePanel.hasFocus()) {
-            if (!stopped) handler.postDelayed(turnTick, 5000);
-            return;
-        }
+        showResume(true);   // la pastille de reprise vit à côté du panneau, hors rotation
         long now = System.currentTimeMillis();
         List<GameDay.Turn> games = gameDay.turns();
         for (GameDay.Turn g : games) {
@@ -2863,23 +2859,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
         RaceWeekend.State f1 = raceCalendar.isEmpty() ? null : RaceWeekend.at(raceCalendar, java.time.Instant.ofEpochMilli(now));
         List<GameDay.Turn> turns = GameDay.merge(games, f1, now);
-        boolean hasResume = resumeItem != null && resumePanel != null;
-        int total = turns.size() + (hasResume ? 1 : 0);   // la reprise de lecture est un tour de plus
+        int total = turns.size();
         if (total == 0) {
             racePanel.setVisibility(View.GONE);
-            showResume(false);
             return;
         }
         int seconds = gameDay.turnSeconds();
         long since = SystemClock.elapsedRealtime() - rotationStart;
         int on = GameDay.current(total, since, seconds);
-        if (hasResume && on == turns.size()) {
-            racePanel.setVisibility(View.GONE);
-            showResume(true);
-            if (total > 1 && !stopped) handler.postDelayed(turnTick, GameDay.delayToNextTurn(since, seconds));
-            return;
-        }
-        showResume(false);
         GameDay.Turn t = turns.get(on);
         if (t.f1) {
             raceBar.setBackgroundResource(R.drawable.race_bar);
@@ -2980,8 +2967,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     // ---- resume_card (fork de Romeo) ---------------------------------------------------------------
 
     private void setUpResumePanel() {
-        float r = 10 * density;
-        View box = findViewById(R.id.resumeThumbBox);
+        float r = 6 * density;
         ImageView thumb = findViewById(R.id.resumeThumb);
         thumb.setOutlineProvider(new android.view.ViewOutlineProvider() {
             @Override
@@ -2990,14 +2976,17 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             }
         });
         thumb.setClipToOutline(true);
-        GradientDrawable ring = new GradientDrawable();
-        ring.setCornerRadius(r + 3 * density);
-        ring.setColor(0x00000000);
-        box.setBackground(ring);
+        // Verre fumé, comme le popup Sources ; le focus épaissit le contour en blanc.
+        GradientDrawable pill = new GradientDrawable();
+        pill.setCornerRadius(22 * density);
+        pill.setColor(0x8C1C1B1A);
+        pill.setStroke(Math.max(1, Math.round(density / 2f)), 0x29FFFFFF);
+        resumePanel.setBackground(pill);
         resumePanel.setOnFocusChangeListener((v, focused) -> {
-            ring.setStroke(focused ? Math.round(2.5f * density) : 0, 0xE6FFFFFF);
-            resumePanel.animate().scaleX(focused && !reducedMotion ? 1.03f : 1f)
-                    .scaleY(focused && !reducedMotion ? 1.03f : 1f)
+            pill.setStroke(focused ? Math.round(2 * density) : Math.max(1, Math.round(density / 2f)),
+                    focused ? 0xE6FFFFFF : 0x29FFFFFF);
+            resumePanel.animate().scaleX(focused && !reducedMotion ? 1.04f : 1f)
+                    .scaleY(focused && !reducedMotion ? 1.04f : 1f)
                     .setDuration(reducedMotion ? Motion.REDUCED_MS : 160).start();
         });
         resumePanel.setOnKeyListener((v, keyCode, event) -> {
@@ -3005,6 +2994,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             switch (keyCode) {
                 case KeyEvent.KEYCODE_DPAD_DOWN:
                     focusTile(singleRow ? lastFocused : lastFocused % COLUMNS);   // retour sur la tuile d'où on vient
+                    return true;
+                case KeyEvent.KEYCODE_DPAD_UP:
+                    btnHome.requestFocus();                                        // encore Haut : la capsule
                     return true;
                 case KeyEvent.KEYCODE_DPAD_LEFT:
                 case KeyEvent.KEYCODE_DPAD_RIGHT:
@@ -3051,7 +3043,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             // Pas d'affiche lisible hors ligne : l'icône de l'app sur un fond sombre.
             thumb.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
             thumb.setBackgroundColor(0xFF2A2826);
-            thumb.setPadding(Math.round(18 * density), Math.round(12 * density), Math.round(18 * density), Math.round(20 * density));
+            thumb.setPadding(Math.round(14 * density), Math.round(5 * density), Math.round(14 * density), Math.round(9 * density));
             try {
                 thumb.setImageDrawable(it.pkg == null ? null : getPackageManager().getApplicationIcon(it.pkg));
             } catch (PackageManager.NameNotFoundException e) {
