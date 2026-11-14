@@ -22,8 +22,9 @@ import java.util.Locale;
 /**
  * Fork de Romeo, clé de thème match_layout "days" (maquette Matchs 7) : à la place du panneau qui tourne, tous les
  * matchs à venir en étiquettes sur une ligne au-dessus du dock, groupés sous « CE SOIR », « DEMAIN », « SAMEDI »…
- * La ligne s'arrête avant la pastille Reprendre ; ce qui ne tient pas passe sur les pages suivantes, qui tournent
- * toutes les {@value #PAGE_SECONDS} secondes, avec un point par page.
+ * Trois pages qui tournent toutes les {@value #PAGE_SECONDS} secondes : aujourd'hui, demain, puis le reste de la
+ * semaine (7 jours). Une période vide n'a pas de page ; une période qui ne tient pas avant la pastille Reprendre
+ * continue sur une page de plus. Un point par page.
  */
 final class MatchStrip {
     private static final int LIVE_RED = 0xFFFF3B2F;
@@ -75,13 +76,16 @@ final class MatchStrip {
         final String title, time, day;
         final int colour;
         final boolean live;
+        /** 0 aujourd'hui, 1 demain, 2 le reste de la semaine. */
+        final int period;
 
-        Item(String title, String time, String day, int colour, boolean live) {
+        Item(String title, String time, String day, int colour, boolean live, int period) {
             this.title = title;
             this.time = time;
             this.day = day;
             this.colour = colour;
             this.live = live;
+            this.period = period;
         }
     }
 
@@ -109,19 +113,24 @@ final class MatchStrip {
                 colour = t.colour;
             }
             ZonedDateTime when = Instant.ofEpochMilli(live ? now : start).atZone(zone);
+            long days = java.time.temporal.ChronoUnit.DAYS.between(today, when.toLocalDate());
+            if (days > 7) continue;                       // au-delà de la semaine : pas affiché
+            int period = days <= 0 ? 0 : days == 1 ? 1 : 2;
             items.add(new Item(title, live ? ctx.getString(R.string.game_live) : time(when, is24),
-                    dayLabel(when, today), colour, live));
+                    dayLabel(when, today), colour, live, period));
         }
         // Pages : autant d'étiquettes que la place le permet ; chaque page redonne le jour de sa première étiquette.
         java.util.ArrayList<java.util.ArrayList<View>> pages = new java.util.ArrayList<>();
         java.util.ArrayList<View> page = new java.util.ArrayList<>();
         int used = 0;
         String lastDay = null;
+        int lastPeriod = -1;
         for (Item it : items) {
             View col = column(it.day.equals(lastDay) ? null : it.day, chip(it.title, it.time, it.colour, it.live));
             col.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
             int w = col.getMeasuredWidth() + (page.isEmpty() ? 0 : dp(6));
-            if (!page.isEmpty() && used + w > maxWidth) {
+            // Nouvelle période (demain, la semaine) : nouvelle page ; sinon, nouvelle page seulement si ça déborde.
+            if (!page.isEmpty() && (it.period != lastPeriod || used + w > maxWidth)) {
                 pages.add(page);
                 page = new java.util.ArrayList<>();
                 col = column(it.day, chip(it.title, it.time, it.colour, it.live));
@@ -133,6 +142,7 @@ final class MatchStrip {
             page.add(col);
             used += w;
             lastDay = it.day;
+            lastPeriod = it.period;
         }
         if (!page.isEmpty()) pages.add(page);
 
