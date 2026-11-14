@@ -22,20 +22,33 @@ import java.util.Locale;
 /**
  * Fork de Romeo, clé de thème match_layout "days" (maquette Matchs 7) : à la place du panneau qui tourne, tous les
  * matchs à venir en étiquettes sur une ligne au-dessus du dock, groupés sous « CE SOIR », « DEMAIN », « SAMEDI »…
- * La ligne s'arrête avant la pastille Reprendre : une étiquette qui ne tient pas n'est pas affichée.
+ * La ligne s'arrête avant la pastille Reprendre ; ce qui ne tient pas passe sur les pages suivantes, qui tournent
+ * toutes les {@value #PAGE_SECONDS} secondes, avec un point par page.
  */
 final class MatchStrip {
     private static final int LIVE_RED = 0xFFFF3B2F;
+    static final int PAGE_SECONDS = 10;
     private final Context ctx;
     private final float density;
     final LinearLayout view;
+    private final LinearLayout row;
+    private final LinearLayout dots;
 
     MatchStrip(Context ctx, FrameLayout root, float density) {
         this.ctx = ctx;
         this.density = density;
         view = new LinearLayout(ctx);
-        view.setOrientation(LinearLayout.HORIZONTAL);
-        view.setGravity(Gravity.BOTTOM);
+        view.setOrientation(LinearLayout.VERTICAL);
+        row = new LinearLayout(ctx);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.BOTTOM);
+        view.addView(row);
+        dots = new LinearLayout(ctx);
+        dots.setOrientation(LinearLayout.HORIZONTAL);
+        LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        dlp.topMargin = dp(9);
+        view.addView(dots, dlp);
         view.setFocusable(false);
         view.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         view.setVisibility(View.GONE);
@@ -55,16 +68,28 @@ final class MatchStrip {
         return Math.round(v * density);
     }
 
+    private static final class Item {
+        final String title, time, day;
+        final int colour;
+        final boolean live;
+
+        Item(String title, String time, String day, int colour, boolean live) {
+            this.title = title;
+            this.time = time;
+            this.day = day;
+            this.colour = colour;
+            this.live = live;
+        }
+    }
+
     /**
-     * Refait la ligne. {@code maxWidth} : la place jusqu'à la pastille Reprendre (ou le bord droit), en pixels.
-     * {@code f1} : le week-end F1 du thème, ou null.
+     * Refait la ligne et renvoie le nombre de pages. {@code maxWidth} : la place jusqu'à la pastille Reprendre (ou le
+     * bord droit), en pixels. {@code f1} : le week-end F1 du thème, ou null. {@code sinceMs} choisit la page.
      */
-    void render(List<GameDay.Turn> turns, RaceWeekend.State f1, long now, int maxWidth, boolean is24) {
-        view.removeAllViews();
+    int render(List<GameDay.Turn> turns, RaceWeekend.State f1, long now, int maxWidth, boolean is24, long sinceMs) {
         ZoneId zone = ZoneId.systemDefault();
         LocalDate today = LocalDate.now(zone);
-        String lastDay = null;
-        int used = 0;
+        java.util.ArrayList<Item> items = new java.util.ArrayList<>();
         for (GameDay.Turn t : turns) {
             boolean live = GameDay.live(t, now);
             long start = t.startMs;
@@ -74,27 +99,72 @@ final class MatchStrip {
                 if (f1 == null) continue;
                 live = f1.live != null;
                 title = "F1 · " + f1.race.shortName();
-                colour = 0xFFFF3B2F;
+                colour = LIVE_RED;
                 if (!live && f1.next != null) start = f1.next.start.toEpochMilli();
             } else {
                 title = matchup(t.topLine);
                 colour = t.colour;
             }
             ZonedDateTime when = Instant.ofEpochMilli(live ? now : start).atZone(zone);
-            String day = dayLabel(when, today);
-            String time = live ? ctx.getString(R.string.game_live) : time(when, is24);
-            LinearLayout column = column(day.equals(lastDay) ? null : day, chip(title, time, colour, live));
-            column.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
-            int w = column.getMeasuredWidth() + (view.getChildCount() > 0 ? dp(6) : 0);
-            if (used + w > maxWidth) break;
+            items.add(new Item(title, live ? ctx.getString(R.string.game_live) : time(when, is24),
+                    dayLabel(when, today), colour, live));
+        }
+        // Pages : autant d'étiquettes que la place le permet ; chaque page redonne le jour de sa première étiquette.
+        java.util.ArrayList<java.util.ArrayList<View>> pages = new java.util.ArrayList<>();
+        java.util.ArrayList<View> page = new java.util.ArrayList<>();
+        int used = 0;
+        String lastDay = null;
+        for (Item it : items) {
+            View col = column(it.day.equals(lastDay) ? null : it.day, chip(it.title, it.time, it.colour, it.live));
+            col.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
+            int w = col.getMeasuredWidth() + (page.isEmpty() ? 0 : dp(6));
+            if (!page.isEmpty() && used + w > maxWidth) {
+                pages.add(page);
+                page = new java.util.ArrayList<>();
+                col = column(it.day, chip(it.title, it.time, it.colour, it.live));
+                col.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
+                w = col.getMeasuredWidth();
+                used = 0;
+            }
+            if (page.isEmpty() && w > maxWidth) continue;   // une seule étiquette plus large que la place
+            page.add(col);
+            used += w;
+            lastDay = it.day;
+        }
+        if (!page.isEmpty()) pages.add(page);
+
+        row.removeAllViews();
+        dots.removeAllViews();
+        if (pages.isEmpty()) {
+            view.setVisibility(View.GONE);
+            return 0;
+        }
+        int on = (int) ((Math.max(0, sinceMs) / (PAGE_SECONDS * 1000L)) % pages.size());
+        for (View col : pages.get(on)) {
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT);
-            if (view.getChildCount() > 0) lp.leftMargin = dp(6);
-            view.addView(column, lp);
-            used += w;
-            lastDay = day;
+            if (row.getChildCount() > 0) lp.leftMargin = dp(6);
+            row.addView(col, lp);
         }
-        view.setVisibility(view.getChildCount() > 0 ? View.VISIBLE : View.GONE);
+        if (pages.size() > 1) {
+            int size = dp(5);
+            for (int k = 0; k < pages.size(); k++) {
+                View dot = new View(ctx);
+                GradientDrawable d = new GradientDrawable();
+                d.setShape(GradientDrawable.OVAL);
+                d.setColor(0xFFFFFFFF);
+                dot.setBackground(d);
+                dot.setAlpha(k == on ? 0.9f : 0.3f);
+                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(size, size);
+                lp.rightMargin = size;
+                dots.addView(dot, lp);
+            }
+            dots.setVisibility(View.VISIBLE);
+        } else {
+            dots.setVisibility(View.GONE);
+        }
+        view.setVisibility(View.VISIBLE);
+        return pages.size();
     }
 
     /** "Lyon at Marseille" (le format de Game Day) devient « Marseille – Lyon », l'équipe à domicile d'abord. */

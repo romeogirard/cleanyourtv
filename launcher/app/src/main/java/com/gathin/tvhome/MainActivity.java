@@ -2879,8 +2879,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                     : Math.round(60 * density);
             int max = root.getWidth() - Math.round(60 * density) - end;
             if (max <= 0) max = Math.round(560 * density);
-            matchStrip.render(turns, f1, now, max, ClockFormat.is24(this, clockFormat));
-            if (!stopped) handler.postDelayed(stripTick, 60_000 - now % 60_000 + 500);
+            long since = SystemClock.elapsedRealtime() - rotationStart;
+            int pages = matchStrip.render(turns, f1, now, max, ClockFormat.is24(this, clockFormat), since);
+            long pageMs = MatchStrip.PAGE_SECONDS * 1000L;
+            // Plusieurs pages : la suivante dans 10 s ; une seule : on rafraîchit les heures chaque minute.
+            if (!stopped) handler.postDelayed(stripTick, pages > 1 ? pageMs - since % pageMs + 50 : 60_000 - now % 60_000 + 500);
             return;
         }
         int total = turns.size();
