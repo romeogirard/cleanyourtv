@@ -184,6 +184,8 @@ final class MatchStrip {
     static String matchup(String topLine) {
         if (topLine == null) return "";
         topLine = noEmoji(topLine);
+        // Le calendrier des Canadiens marque domicile et extérieur : « Canadiens (H) », « Canadiens (A) ».
+        topLine = topLine.replaceAll("\\s*\\((?:H|A)\\)", "").trim();
         int at = topLine.indexOf(" at ");
         if (at <= 0 || topLine.indexOf(" at ", at + 4) >= 0) return topLine;
         return topLine.substring(at + 4).trim() + " – " + topLine.substring(0, at).trim();
