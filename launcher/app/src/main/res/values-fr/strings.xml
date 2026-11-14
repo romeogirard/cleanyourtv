@@ -102,4 +102,7 @@
     <string name="clock_format_24">24 heures</string>
     <string name="resume_min_left">%1$d min restantes</string>
     <string name="resume_hour_left">%1$d h %2$02d restantes</string>
+    <string name="match_today">Aujourd\'hui</string>
+    <string name="match_tonight">Ce soir</string>
+    <string name="match_tomorrow">Demain</string>
 </resources>

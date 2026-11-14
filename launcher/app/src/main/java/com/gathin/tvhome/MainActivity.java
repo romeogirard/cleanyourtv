@@ -202,6 +202,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private ClockWeather clockWeather;
     // resume_card (fork de Romeo)
     private LinearLayout resumePanel;
+    private MatchStrip matchStrip;
+    private final Runnable stripTick = this::updatePanel;
     private ResumeSource.Item resumeItem;
     private boolean resumeEnabled;
     private final java.util.concurrent.ExecutorService resumeIo = java.util.concurrent.Executors.newSingleThreadExecutor();
@@ -584,6 +586,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         resumePanel = findViewById(R.id.resumePanel);
         resumeEnabled = ResumeSource.enabled(this);
         if (resumeEnabled) setUpResumePanel();
+        if (MatchStrip.enabled(this)) matchStrip = new MatchStrip(this, (FrameLayout) racePanel.getParent(), density);
         raceKicker = findViewById(R.id.raceKicker);
         raceHeadline = findViewById(R.id.raceHeadline);
         raceSessions = findViewById(R.id.raceSessions);
@@ -714,6 +717,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                     lp.bottomMargin = bottom;
                     racePanel.setLayoutParams(lp);
                 }
+                if (matchStrip != null) {
+                    FrameLayout.LayoutParams sl = (FrameLayout.LayoutParams) matchStrip.view.getLayoutParams();
+                    if (Math.abs(sl.bottomMargin - bottom) > 1) {
+                        sl.bottomMargin = bottom;
+                        matchStrip.view.setLayoutParams(sl);
+                    }
+                }
                 if (resumePanel != null) {
                     FrameLayout.LayoutParams rl = (FrameLayout.LayoutParams) resumePanel.getLayoutParams();
                     if (Math.abs(rl.bottomMargin - bottom) > 1) {
@@ -804,13 +814,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         // game_day: the panel above the dock rides up with the cards instead of being covered by them, and fades
         // out by the time it reaches the clock. The grid's own offset is read, so a jump (Home, a restored focus)
         // lands right too.
-        if (gameDay != null || resumeEnabled) {
+        if (gameDay != null || resumeEnabled || matchStrip != null) {
             View clockBlock = findViewById(R.id.leftBlock);
             grid.addOnScrollListener(new RecyclerView.OnScrollListener() {
                 @Override
                 public void onScrolled(@NonNull RecyclerView rv, int dx, int dy) {
                     int shift = rv.canScrollVertically(-1) ? rv.computeVerticalScrollOffset() : 0;
-                    for (View panel : new View[]{racePanel, resumePanel}) {
+                    for (View panel : new View[]{racePanel, resumePanel, matchStrip == null ? null : matchStrip.view}) {
                         if (panel == null) continue;
                         panel.setTranslationY(-shift);
                         int room = Math.max(1, panel.getTop() - clockBlock.getBottom());
@@ -1371,6 +1381,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         stopStats();
         if (gameDay != null) gameDay.stop();
         handler.removeCallbacks(turnTick);
+        handler.removeCallbacks(stripTick);
         if (lamp != null) lamp.stop();
         cancelPendingFocusScroll();
         // Nothing of ours stays on screen over another app; an undecided prompt simply returns next time.
@@ -2859,6 +2870,19 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
         RaceWeekend.State f1 = raceCalendar.isEmpty() ? null : RaceWeekend.at(raceCalendar, java.time.Instant.ofEpochMilli(now));
         List<GameDay.Turn> turns = GameDay.merge(games, f1, now);
+        if (matchStrip != null) {
+            // match_layout "days" : toutes les étiquettes d'un coup, rafraîchies chaque minute, sans rotation.
+            racePanel.setVisibility(View.GONE);
+            handler.removeCallbacks(stripTick);
+            int end = resumePanel != null && resumePanel.getVisibility() == View.VISIBLE && resumePanel.getWidth() > 0
+                    ? resumePanel.getWidth() + Math.round(60 * density) + Math.round(24 * density)
+                    : Math.round(60 * density);
+            int max = root.getWidth() - Math.round(60 * density) - end;
+            if (max <= 0) max = Math.round(560 * density);
+            matchStrip.render(turns, f1, now, max, ClockFormat.is24(this, clockFormat));
+            if (!stopped) handler.postDelayed(stripTick, 60_000 - now % 60_000 + 500);
+            return;
+        }
         int total = turns.size();
         if (total == 0) {
             racePanel.setVisibility(View.GONE);
@@ -3070,6 +3094,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             }
         } else if (resumePanel.getVisibility() != View.VISIBLE) {
             resumePanel.setVisibility(View.VISIBLE);
+            if (matchStrip != null) resumePanel.post(this::updatePanel);   // la ligne de matchs s'arrête avant la pastille
         }
     }
 

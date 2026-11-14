@@ -163,4 +163,7 @@
     <string name="home_button" translatable="false">Accueil</string>
     <string name="resume_min_left">%1$d min left</string>
     <string name="resume_hour_left">%1$d h %2$02d left</string>
+    <string name="match_today">Today</string>
+    <string name="match_tonight">Tonight</string>
+    <string name="match_tomorrow">Tomorrow</string>
 </resources>

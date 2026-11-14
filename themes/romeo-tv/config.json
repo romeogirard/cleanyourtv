@@ -48,6 +48,7 @@
   "top_bar_capsule": true,
   "clock_weather": true,
   "resume_card": true,
+  "match_layout": "days",
   "power_on_home_always": true,
   "launch_actions": [
     "input.hdmi1=input:com.tcl.tvinput/.passthroughinput.TvPassThroughService/HW1413744128",
