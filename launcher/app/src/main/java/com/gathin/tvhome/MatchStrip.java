@@ -183,9 +183,28 @@ final class MatchStrip {
     /** "Lyon at Marseille" (le format de Game Day) devient « Marseille – Lyon », l'équipe à domicile d'abord. */
     static String matchup(String topLine) {
         if (topLine == null) return "";
+        topLine = noEmoji(topLine);
         int at = topLine.indexOf(" at ");
         if (at <= 0 || topLine.indexOf(" at ", at + 4) >= 0) return topLine;
         return topLine.substring(at + 4).trim() + " – " + topLine.substring(0, at).trim();
+    }
+
+    /**
+     * Retire les emojis et drapeaux où qu'ils soient : les calendriers en mettent de chaque côté (« 🇫🇷 France – Turquie
+     * 🇹🇷 ») et Game Day n'enlève que celui de tête, d'où un seul drapeau sur deux.
+     */
+    static String noEmoji(String s) {
+        StringBuilder b = new StringBuilder(s.length());
+        for (int i = 0; i < s.length(); ) {
+            int cp = s.codePointAt(i);
+            i += Character.charCount(cp);
+            boolean emoji = Character.getType(cp) == Character.OTHER_SYMBOL || Character.getType(cp) == Character.SURROGATE
+                    || (cp >= 0x1F1E6 && cp <= 0x1F1FF)        // lettres des drapeaux
+                    || (cp >= 0x1F3FB && cp <= 0x1F3FF)        // tons de peau
+                    || cp == 0x200D || cp == 0xFE0F || cp == 0xFE0E || (cp >= 0xE0020 && cp <= 0xE007F);
+            if (!emoji) b.appendCodePoint(cp);
+        }
+        return b.toString().replaceAll("\\s{2,}", " ").trim();
     }
 
     private String dayLabel(ZonedDateTime when, LocalDate today) {
