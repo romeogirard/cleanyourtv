@@ -42,7 +42,10 @@ final class MatchStrip {
         row = new LinearLayout(ctx);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.BOTTOM);
-        view.addView(row);
+        // WRAP_CONTENT explicite : par défaut une colonne verticale étire la ligne puis la ramène à la largeur des
+        // points (forceUniformWidth), ce qui écrasait les étiquettes.
+        view.addView(row, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT));
         dots = new LinearLayout(ctx);
         dots.setOrientation(LinearLayout.HORIZONTAL);
         LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
