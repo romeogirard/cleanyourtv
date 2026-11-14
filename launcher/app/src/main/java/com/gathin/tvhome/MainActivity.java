@@ -2978,7 +2978,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         thumb.setClipToOutline(true);
         // Verre fumé, comme le popup Sources ; le focus épaissit le contour en blanc.
         GradientDrawable pill = new GradientDrawable();
-        pill.setCornerRadius(22 * density);
+        pill.setCornerRadius(6 * density);   // 12 px, comme la maquette C retouchée
         pill.setColor(0x8C1C1B1A);
         pill.setStroke(Math.max(1, Math.round(density / 2f)), 0x29FFFFFF);
         resumePanel.setBackground(pill);
